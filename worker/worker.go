@@ -4,7 +4,6 @@ package worker
 // Copyright © 2018 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
 
 import (
-	// "fmt"
 	"runtime"
 	"sync/atomic"
 )
@@ -15,22 +14,36 @@ const (
 )
 
 /*
-Worker -
+NewWorker - create new worker.
 */
-type Worker struct {
-	hasp       int64
-	startFunc  func() error
-	stopFunc   func() error
-	workerFunc func()
+func NewWorker(startFunc func() error, stopFunc func() error, workerFuncs []func()) *Worker {
+	return &Worker{
+		hasp:        stateStopped,
+		startFunc:   startFunc,
+		stopFunc:    stopFunc,
+		workerFuncs: workerFuncs,
+	}
 }
 
-func NewWorker(startFunc func() error, stopFunc func() error, workerFunc func()) *Worker {
-	return &Worker{
-		hasp:       stateStopped,
-		startFunc:  startFunc,
-		stopFunc:   stopFunc,
-		workerFunc: workerFunc,
-	}
+/*
+SetStartFunc -
+*/
+func (w *Worker) SetStartFunction(f func() error) {
+	w.startFunc = f
+}
+
+/*
+SetStopFunc -
+*/
+func (w *Worker) SetStopFunction(f func() error) {
+	w.stopFunc = f
+}
+
+/*
+SetStopFunc -
+*/
+func (w *Worker) SetWorkerFunctions(fs []func()) {
+	w.workerFuncs = fs
 }
 
 /*
@@ -39,10 +52,9 @@ Start -
 func (w *Worker) Start() error {
 	state := atomic.LoadInt64(&w.hasp)
 	switch {
-	case state > stateStopped: // уже запущен
-
+	case state > stateStopped: // already started
 		return nil
-	case state < stateStopped: // останавливается
+	case state < stateStopped: // already stops
 		for {
 			if atomic.LoadInt64(&w.hasp) == stateStopped {
 				break
@@ -50,14 +62,18 @@ func (w *Worker) Start() error {
 			runtime.Gosched()
 		}
 		fallthrough
-	case state == stateStopped: // стоит, можно запускать
-		atomic.AddInt64(&w.hasp, 1)
-		if err := w.startFunc(); err != nil {
-			atomic.StoreInt64(&w.hasp, stateStopped)
-			return err
+	case state == stateStopped: // stopped, you can start
+		for _, f := range w.workerFuncs {
+			if w.startFunc != nil {
+				if err := w.startFunc(); err != nil {
+					w.Stop()
+					return err
+				}
+			}
+			atomic.AddInt64(&w.hasp, 1)
+			go w.worker(f)
 		}
 		return nil
-
 	}
 	return nil
 }
@@ -70,13 +86,16 @@ func (w *Worker) Stop() error {
 	switch {
 	case state == stateStopped:
 		return nil
-	case state > stateStopped: // уже останавливается
-		atomic.StoreInt64(&w.hasp, -state) // TODO: не совсем безопасно реализовано
+	case state > stateStopped: // already stops
+		atomic.StoreInt64(&w.hasp, -state) // TODO: unsafe
 		fallthrough
 	case state < stateStopped:
 		for {
 			if atomic.LoadInt64(&w.hasp) == stateStopped {
-				return w.stopFunc()
+				if w.stopFunc != nil {
+					return w.stopFunc()
+				}
+				return nil
 			}
 			runtime.Gosched()
 		}
@@ -84,11 +103,9 @@ func (w *Worker) Stop() error {
 	return nil
 }
 
-func (w *Worker) worker() {
+func (w *Worker) worker(f func()) {
 	for {
-		w.workerFunc()
-		// --
-
+		f() 
 		if atomic.LoadInt64(&w.hasp) < stateStopped {
 			atomic.AddInt64(&w.hasp, 1)
 			return
