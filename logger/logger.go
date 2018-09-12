@@ -73,7 +73,7 @@ func (l *Logger) Context(title string, ctx interface{}) *Logger {
 }
 
 /*
-Send- send information to the log
+Send - send information to the log
 */
 func (l *Logger) Send() (int, error) {
 	buf := bytes.NewBuffer([]byte{})
