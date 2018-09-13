@@ -10,6 +10,12 @@ import (
 	"io"
 )
 
+const (
+	importanceError   string = "Error"
+	importanceWarning string = "Warning"
+	importanceInfo    string = "Info"
+)
+
 /*
 Logger - logging with context and branching support
 */
@@ -33,7 +39,7 @@ Error - write an `error` message
 func (l *Logger) Error(ctx interface{}) *Logger {
 	return &Logger{
 		parent:  l,
-		title:   "Error",
+		title:   importanceError,
 		context: ctx,
 	}
 }
@@ -44,7 +50,7 @@ Warning - write an `warning` message
 func (l *Logger) Warning(ctx interface{}) *Logger {
 	return &Logger{
 		parent:  l,
-		title:   "Warning",
+		title:   importanceWarning,
 		context: ctx,
 	}
 }
@@ -55,7 +61,7 @@ Info - write down an information message
 func (l *Logger) Info(ctx interface{}) *Logger {
 	return &Logger{
 		parent:  l,
-		title:   "Info",
+		title:   importanceWarning,
 		context: ctx,
 	}
 }
@@ -76,6 +82,7 @@ func (l *Logger) Context(title string, ctx interface{}) *Logger {
 Send - send information to the log
 */
 func (l *Logger) Send() (int, error) {
+	before := []byte{}
 	buf := bytes.NewBuffer([]byte{})
 	curLogger := l
 	bufStr := make([]string, 0)
@@ -83,7 +90,14 @@ func (l *Logger) Send() (int, error) {
 		if curLogger.writer != nil {
 			break
 		}
-		bufStr = append(bufStr, fmt.Sprintf("%s: %v. ", curLogger.title, curLogger.context))
+		if curLogger.title == importanceError ||
+			curLogger.title == importanceWarning ||
+			curLogger.title == importanceInfo {
+			before = []byte(fmt.Sprintf("%s: %v. ", curLogger.title, curLogger.context))
+		} else {
+			bufStr = append(bufStr, fmt.Sprintf("%s: %v. ", curLogger.title, curLogger.context))
+		}
+
 		curLogger = curLogger.parent
 	}
 	for i := len(bufStr) - 1; i >= 0; i-- {
@@ -91,5 +105,10 @@ func (l *Logger) Send() (int, error) {
 			return count, err
 		}
 	}
-	return curLogger.writer.Write(buf.Bytes())
+	countA, err := curLogger.writer.Write(before)
+	if err != nil {
+		return countA, err
+	}
+	countB, err := curLogger.writer.Write(buf.Bytes())
+	return countA + countB, err
 }
