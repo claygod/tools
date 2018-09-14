@@ -1,9 +1,11 @@
 package worker
 
 // Worker
+// API
 // Copyright © 2018 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
 
 import (
+	"fmt"
 	"runtime"
 	"sync/atomic"
 )
@@ -14,42 +16,58 @@ const (
 )
 
 /*
+Worker - universal router for start-stop services
+*/
+type Worker struct {
+	hasp        int64
+	startFunc   func() error
+	stopFunc    func() error
+	workerFuncs []func()
+}
+
+/*
 NewWorker - create new worker.
 */
-func NewWorker(startFunc func() error, stopFunc func() error, workerFuncs []func()) *Worker {
+func New() *Worker {
 	return &Worker{
-		hasp:        stateStopped,
-		startFunc:   startFunc,
-		stopFunc:    stopFunc,
-		workerFuncs: workerFuncs,
+		hasp: stateStopped,
+		//startFunc:   startFunc,
+		//stopFunc:    stopFunc,
+		workerFuncs: make([]func(), 0, 1),
 	}
 }
 
 /*
 SetStartFunc -
 */
-func (w *Worker) SetStartFunction(f func() error) {
+func (w *Worker) Starter(f func() error) *Worker {
 	w.startFunc = f
+	return w
 }
 
 /*
 SetStopFunc -
 */
-func (w *Worker) SetStopFunction(f func() error) {
+func (w *Worker) Stoper(f func() error) *Worker {
 	w.stopFunc = f
+	return w
 }
 
 /*
 SetStopFunc -
 */
-func (w *Worker) SetWorkerFunctions(fs []func()) {
-	w.workerFuncs = fs
+func (w *Worker) Worker(f func()) *Worker {
+	w.workerFuncs = append(w.workerFuncs, f)
+	return w
 }
 
 /*
 Start -
 */
 func (w *Worker) Start() error {
+	if len(w.workerFuncs) == 0 {
+		return fmt.Errorf("No functions for work (for start)")
+	}
 	state := atomic.LoadInt64(&w.hasp)
 	switch {
 	case state > stateStopped: // already started
@@ -71,6 +89,7 @@ func (w *Worker) Start() error {
 				}
 			}
 			atomic.AddInt64(&w.hasp, 1)
+			// fmt.Println(" ", w.workerFuncs)
 			go w.worker(f)
 		}
 		return nil
@@ -82,6 +101,9 @@ func (w *Worker) Start() error {
 Stop -
 */
 func (w *Worker) Stop() error {
+	if len(w.workerFuncs) == 0 {
+		return fmt.Errorf("No functions for work  (for stop)")
+	}
 	state := atomic.LoadInt64(&w.hasp)
 	switch {
 	case state == stateStopped:
@@ -105,7 +127,7 @@ func (w *Worker) Stop() error {
 
 func (w *Worker) worker(f func()) {
 	for {
-		f() 
+		f()
 		if atomic.LoadInt64(&w.hasp) < stateStopped {
 			atomic.AddInt64(&w.hasp, 1)
 			return
