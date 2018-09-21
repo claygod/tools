@@ -30,9 +30,7 @@ NewWorker - create new worker.
 */
 func New() *Worker {
 	return &Worker{
-		hasp: stateStopped,
-		//startFunc:   startFunc,
-		//stopFunc:    stopFunc,
+		hasp:        stateStopped,
 		workerFuncs: make([]func(), 0, 1),
 	}
 }
@@ -89,7 +87,6 @@ func (w *Worker) Start() error {
 				}
 			}
 			atomic.AddInt64(&w.hasp, 1)
-			// fmt.Println(" ", w.workerFuncs)
 			go w.worker(f)
 		}
 		return nil
