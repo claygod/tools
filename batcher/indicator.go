@@ -11,18 +11,18 @@ import (
 const cleanerShift uint8 = 128 // shift to exclude race condition
 
 /*
-Indicator - the closing of the channels signals the completed task.
+indicator - the closing of the channels signals the completed task.
 */
-type Indicator struct {
+type indicator struct {
 	chDone [256]chan struct{}
 	cursor uint32
 }
 
 /*
-NewIndicator - create new Indicator.
+newIndicator - create new Indicator.
 */
-func NewIndicator() *Indicator {
-	i := &Indicator{}
+func newIndicator() *indicator {
+	i := &indicator{}
 	for u := 0; u < 256; u++ {
 		i.chDone[u] = make(chan struct{})
 	}
@@ -35,7 +35,7 @@ SwitchChan - switch channels:
 	- the pointer switches to a new channel
 	- the old channel (with a shift) is closed
 */
-func (i *Indicator) SwitchChan() {
+func (i *indicator) switchChan() {
 	cursor := uint8(atomic.LoadUint32(&i.cursor))
 	i.chDone[cursor+1] = make(chan struct{})
 	atomic.StoreUint32(&i.cursor, uint32(cursor+1))
@@ -43,9 +43,9 @@ func (i *Indicator) SwitchChan() {
 }
 
 /*
-GetChan - get current channel.
+getChan - get current channel.
 */
-func (i *Indicator) GetChan() chan struct{} {
+func (i *indicator) getChan() chan struct{} {
 	cursor := uint8(atomic.LoadUint32(&i.cursor))
 	return i.chDone[cursor]
 }
