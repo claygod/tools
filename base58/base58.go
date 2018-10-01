@@ -1,7 +1,7 @@
 package base58
 
-// Processing
 // Base58
+// Main
 // Copyright © 2018 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
 
 import (
