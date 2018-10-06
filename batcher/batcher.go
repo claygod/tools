@@ -1,11 +1,10 @@
 package batcher
 
 // Batcher
-// Main
+// API
 // Copyright © 2018 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
 
 import (
-	"bytes"
 	"io"
 	"runtime"
 	"sync/atomic"
@@ -22,7 +21,7 @@ const (
 Batcher - performs write jobs in batches.
 */
 type Batcher struct {
-	indicator *Indicator
+	indicator *indicator
 	work      io.Writer
 	alarm     func(error)
 	chInput   chan []byte
@@ -34,18 +33,16 @@ type Batcher struct {
 /*
 NewBatcher - create new batcher.
 Arguments:
-	- indicator - the closing of the channels signals the completed task
-	- work  - function that records the formed batch
-	- alarm - error handling function
-	- chInput - input channel
-	- chStop - channel for the correct stoppage of the worker
-	- batchSize - batch size
+	- workFunc	- function that records the formed batch
+	- alarmFunc	- error handling function
+	- chInput	- input channel
+	- batchSize	- batch size
 */
-func NewBatcher(i *Indicator, work io.Writer, alarm func(error), chInput chan []byte, batchSize int) *Batcher {
+func NewBatcher(workFunc io.Writer, alarmFunc func(error), chInput chan []byte, batchSize int) *Batcher {
 	return &Batcher{
-		indicator: i,
-		work:      work,
-		alarm:     alarm,
+		indicator: newIndicator(),
+		work:      workFunc,
+		alarm:     alarmFunc,
 		chInput:   chInput,
 		chStop:    make(chan struct{}, batchRatio*batchSize),
 		batchSize: batchSize,
@@ -57,7 +54,7 @@ Start - run a worker
 */
 func (b *Batcher) Start() {
 	atomic.StoreInt64(&b.stopFlag, stateStart)
-	b.worker()
+	go b.worker()
 }
 
 /*
@@ -74,42 +71,8 @@ func (b *Batcher) Stop() {
 }
 
 /*
-worker - basic cycle.
-
-	- creates a batch
-	- passes the batch to the vryter
-	- check if you need to stop
-	- switches the channel
-	- zeroes the buffer under the new batch
+GetChan - get current channel.
 */
-func (b *Batcher) worker() {
-	var buf bytes.Buffer
-	for {
-		for i := 0; i < b.batchSize; i++ {
-			select {
-			case inData := <-b.chInput:
-				buf.Write(inData)
-				if _, err := buf.Write(inData); err != nil {
-					b.alarm(err)
-				}
-			default:
-				runtime.Gosched()
-				break
-			}
-		}
-
-		if _, err := b.work.Write(buf.Bytes()); err != nil {
-			b.alarm(err)
-		}
-
-		select {
-		case <-b.chStop:
-			atomic.StoreInt64(&b.stopFlag, stateStop)
-			return
-		default:
-		}
-
-		b.indicator.SwitchChan()
-		buf.Reset()
-	}
+func (b *Batcher) GetChan() chan struct{} {
+	return b.indicator.getChan()
 }

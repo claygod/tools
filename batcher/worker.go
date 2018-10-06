@@ -5,6 +5,7 @@ package batcher
 // Copyright © 2018 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
 
 import (
+	// "fmt"
 	"bytes"
 	"sync/atomic"
 )
@@ -24,7 +25,6 @@ func (b *Batcher) worker() {
 		// begin
 		select {
 		case inData := <-b.chInput:
-			buf.Write(inData)
 			if _, err := buf.Write(inData); err != nil {
 				b.alarm(err)
 			}
@@ -36,7 +36,6 @@ func (b *Batcher) worker() {
 		for i := 0; i < b.batchSize-1; i++ {
 			select {
 			case inData := <-b.chInput:
-				buf.Write(inData)
 				if _, err := buf.Write(inData); err != nil {
 					b.alarm(err)
 				}
@@ -45,10 +44,13 @@ func (b *Batcher) worker() {
 			}
 		}
 		// batch to out
-		if _, err := b.work.Write(buf.Bytes()); err != nil {
-			atomic.StoreInt64(&b.stopFlag, stateStop)
-			b.alarm(err)
-			return
+		bOut := buf.Bytes()
+		if len(bOut) > 0 {
+			if _, err := b.work.Write(buf.Bytes()); err != nil {
+				atomic.StoreInt64(&b.stopFlag, stateStop)
+				b.alarm(err)
+				return
+			}
 		}
 		// exit-check
 		select {
