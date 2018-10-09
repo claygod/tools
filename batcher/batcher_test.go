@@ -1,7 +1,7 @@
 package batcher
 
 // Batcher
-// Tests
+// Batcher tests
 // Copyright © 2018 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
 
 import (
@@ -32,7 +32,7 @@ func TestBatcher(t *testing.T) {
 	}
 
 	btch.Stop()
-	os.Remove(fileName)
+	// os.Remove(fileName)
 }
 
 // --- Helpers for tests ---
