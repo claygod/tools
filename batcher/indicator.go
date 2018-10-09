@@ -5,6 +5,7 @@ package batcher
 // Copyright © 2018 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
 
 import (
+	"fmt"
 	"sync/atomic"
 )
 
@@ -36,6 +37,7 @@ SwitchChan - switch channels:
 	- the old channel (with a shift) is closed
 */
 func (i *indicator) switchChan() {
+	fmt.Println("indicator switch ", uint8(atomic.LoadUint32(&i.cursor)))
 	cursor := uint8(atomic.LoadUint32(&i.cursor))
 	i.chDone[cursor+1] = make(chan struct{})
 	atomic.StoreUint32(&i.cursor, uint32(cursor+1))
