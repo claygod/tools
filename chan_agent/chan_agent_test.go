@@ -4,10 +4,8 @@ package chan_agent
 // Copyright © 2017-2018 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
 
 import (
-	"fmt"
 	"runtime"
 	"testing"
-	"time"
 	"unsafe"
 )
 
