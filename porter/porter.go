@@ -5,18 +5,46 @@ package porter
 // Copyright © 2018 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
 
 import (
+	"runtime"
 	"sort"
+	"sync/atomic"
+	"time"
+)
+
+const timePause time.Duration = 10 * time.Millisecond
+
+const (
+	stateUnlocked int32 = iota
+	stateLocked
 )
 
 type Porter struct {
+	data [4294967295]int32
+}
+
+func New() *Porter {
+	return &Porter{}
 }
 
 func (p *Porter) Catch(keys []string) {
-
+	hashes := p.stringsToHashes(keys)
+	for i, hash := range hashes {
+		if !atomic.CompareAndSwapInt32(&p.data[hash], stateUnlocked, stateUnlocked) {
+			p.throw(hashes[0:i])
+			runtime.Gosched()
+			time.Sleep(timePause)
+		}
+	}
 }
 
 func (p *Porter) Throw(keys []string) {
+	p.throw(p.stringsToHashes(keys))
+}
 
+func (p *Porter) throw(hashes []int) {
+	for _, hash := range hashes {
+		atomic.StoreInt32(&p.data[hash], stateUnlocked)
+	}
 }
 
 func (p *Porter) stringsToHashes(keys []string) []int {
