@@ -18,6 +18,9 @@ const (
 	stateLocked
 )
 
+/*
+Porter - regulates access to resources by keys.
+*/
 type Porter struct {
 	data [4294967295]int32
 }
@@ -26,6 +29,10 @@ func New() *Porter {
 	return &Porter{}
 }
 
+/*
+Catch - block certain resources. This function will infinitely try to block the necessary resources,
+so if the logic of the application using this library contains errors, deadlocks, etc., this can lead to FATAL errors.
+*/
 func (p *Porter) Catch(keys []string) {
 	hashes := p.stringsToHashes(keys)
 	for i, hash := range hashes {
@@ -37,6 +44,9 @@ func (p *Porter) Catch(keys []string) {
 	}
 }
 
+/*
+Throw - frees access to resources. Resources MUST be blocked before this, otherwise using this library will lead to errors.
+*/
 func (p *Porter) Throw(keys []string) {
 	p.throw(p.stringsToHashes(keys))
 }
