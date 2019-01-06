@@ -5,7 +5,7 @@ package batcher
 // Copyright © 2018 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
 
 import (
-	"fmt"
+	// "fmt"
 	"log"
 	"os"
 )
@@ -43,14 +43,14 @@ Write -
 */
 func (c *Client) Write(in []byte) {
 
-	fmt.Println("step 1")
+	//fmt.Println("step 1")
 	c.b.chInput <- in
-	fmt.Println("step 2")
+	//fmt.Println("step 2")
 
-	fmt.Println("step 3")
+	//fmt.Println("step 3")
 	ch := c.b.GetChan()
 	<-ch
-	fmt.Println("step 4")
+	//fmt.Println("step 4")
 }
 
 func (c *Client) Close() {

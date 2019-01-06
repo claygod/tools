@@ -5,9 +5,10 @@ package batcher
 // Copyright © 2018 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
 
 import (
-	// "fmt"
 	"bytes"
+	// "fmt"
 	"sync/atomic"
+	//"time"
 )
 
 /*
@@ -22,15 +23,18 @@ worker - basic cycle.
 func (b *Batcher) worker() {
 	var buf bytes.Buffer
 	for {
+		var u int
 		// begin
 		select {
-		case inData := <-b.chInput:
-			if _, err := buf.Write(inData); err != nil {
-				b.alarm(err)
-			}
+		//		case inData := <-b.chInput:
+		//			if _, err := buf.Write(inData); err != nil {
+		//				b.alarm(err)
+		//			}
 		case <-b.chStop:
 			atomic.StoreInt64(&b.stopFlag, stateStop)
 			return
+		default:
+			break
 		}
 		// batch fill
 		for i := 0; i < b.batchSize-1; i++ {
@@ -38,6 +42,9 @@ func (b *Batcher) worker() {
 			case inData := <-b.chInput:
 				if _, err := buf.Write(inData); err != nil {
 					b.alarm(err)
+
+				} else {
+					u++
 				}
 			default:
 				break
@@ -46,6 +53,7 @@ func (b *Batcher) worker() {
 		// batch to out
 		bOut := buf.Bytes()
 		if len(bOut) > 0 {
+			//fmt.Println("Текущий батч - ", u)
 			if _, err := b.work.Write(buf.Bytes()); err != nil {
 				atomic.StoreInt64(&b.stopFlag, stateStop)
 				b.alarm(err)
@@ -62,5 +70,6 @@ func (b *Batcher) worker() {
 		// cursor (indicator)  switch
 		b.indicator.switchChan()
 		buf.Reset()
+		//time.Sleep(100 * time.Millisecond)
 	}
 }
