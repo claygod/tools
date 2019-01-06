@@ -22,7 +22,7 @@ const (
 Porter - regulates access to resources by keys.
 */
 type Porter struct {
-	data [4294967295]int32
+	data [(1 << 24) - 1]int32
 }
 
 func New() *Porter {
