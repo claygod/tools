@@ -37,7 +37,7 @@ func (b *Batcher) worker() {
 			break
 		}
 		// batch fill
-		for i := 0; i < b.batchSize-1; i++ {
+		for i := 0; i < b.batchSize; i++ { // -1
 			select {
 			case inData := <-b.chInput:
 				if _, err := buf.Write(inData); err != nil {
