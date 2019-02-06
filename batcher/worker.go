@@ -22,10 +22,8 @@ worker - basic cycle.
 	- zeroes the buffer under the new batch
 */
 func (b *Batcher) worker() {
-	//fmt.Println("----------22--- ")
 	var buf bytes.Buffer
 	for {
-		//fmt.Println("------------- ")
 		var u int
 		// begin
 		select {
@@ -69,8 +67,6 @@ func (b *Batcher) worker() {
 				b.alarm(err)
 				return
 			}
-			//b.indicator.switchChan()
-			//buf.Reset()
 		} else {
 			//fmt.Println("Почему-то  len(bOut) == 0 ")
 			//time.Sleep(10 * time.Microsecond)
