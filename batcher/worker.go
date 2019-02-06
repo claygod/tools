@@ -6,7 +6,8 @@ package batcher
 
 import (
 	"bytes"
-	// "fmt"
+	//"fmt"
+	"runtime"
 	"sync/atomic"
 	//"time"
 )
@@ -21,8 +22,10 @@ worker - basic cycle.
 	- zeroes the buffer under the new batch
 */
 func (b *Batcher) worker() {
+	//fmt.Println("----------22--- ")
 	var buf bytes.Buffer
 	for {
+		//fmt.Println("------------- ")
 		var u int
 		// begin
 		select {
@@ -33,6 +36,13 @@ func (b *Batcher) worker() {
 		case <-b.chStop:
 			atomic.StoreInt64(&b.stopFlag, stateStop)
 			return
+			// case inData := <-b.chInput:
+			// 	if _, err := buf.Write(inData); err != nil {
+			// 		b.alarm(err)
+
+			// 	} else {
+			// 		u++
+			// 	}
 		default:
 			break
 		}
@@ -59,6 +69,12 @@ func (b *Batcher) worker() {
 				b.alarm(err)
 				return
 			}
+			//b.indicator.switchChan()
+			//buf.Reset()
+		} else {
+			//fmt.Println("Почему-то  len(bOut) == 0 ")
+			//time.Sleep(10 * time.Microsecond)
+			runtime.Gosched()
 		}
 		// exit-check
 		select {
@@ -70,6 +86,7 @@ func (b *Batcher) worker() {
 		// cursor (indicator)  switch
 		b.indicator.switchChan()
 		buf.Reset()
+
 		//time.Sleep(100 * time.Millisecond)
 	}
 }

@@ -63,6 +63,6 @@ func (i *indicator) getChan() chan struct{} {
 func (i *indicator) autoSwitcher() {
 	for {
 		i.switchChan()
-		time.Sleep(2 * time.Microsecond)
+		time.Sleep(200 * time.Microsecond)
 	}
 }

@@ -53,15 +53,17 @@ func NewBatcher(workFunc io.Writer, alarmFunc func(error), chInput chan []byte, 
 Start - run a worker
 */
 func (b *Batcher) Start() {
-	atomic.StoreInt64(&b.stopFlag, stateStart)
-	go b.worker()
+	if atomic.CompareAndSwapInt64(&b.stopFlag, stateStop, stateStart) {
+		go b.worker()
+	}
 }
 
 /*
 Stop - finish the job
 */
 func (b *Batcher) Stop() {
-	b.chStop <- struct{}{}
+	close(b.chStop)
+	//b.chStop <- struct{}{}
 	for {
 		if atomic.LoadInt64(&b.stopFlag) == stateStop {
 			return

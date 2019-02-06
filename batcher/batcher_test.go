@@ -6,6 +6,7 @@ package batcher
 
 import (
 	"os"
+	"runtime/pprof"
 	"testing"
 	"time"
 )
@@ -35,6 +36,36 @@ func TestBatcher(t *testing.T) {
 	// os.Remove(fileName)
 }
 
+func BenchmarkClient(b *testing.B) { // go tool pprof -web ./batcher.test ./cpu.txt
+	b.StopTimer()
+	clt, err := Open("./tmp.txt", 2000)
+	if err != nil {
+		b.Error("Error `stat` file")
+	}
+	//defer
+	dummy := forTestGetDummy(100)
+
+	u := 0
+	b.SetParallelism(256)
+	f, err := os.Create("cpu.txt")
+	if err != nil {
+		b.Error("could not create CPU profile: ", err)
+	}
+	if err := pprof.StartCPUProfile(f); err != nil {
+		b.Error("could not start CPU profile: ", err)
+	}
+	b.StartTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			clt.Write(dummy)
+			u++
+		}
+	})
+	pprof.StopCPUProfile()
+	clt.Close()
+	// os.Remove(fileName)
+}
+
 // --- Helpers for tests ---
 
 type mockWriter struct {
@@ -58,4 +89,12 @@ func (m *mockWriter) Close() {
 
 func mockAlarmHandle(err error) {
 	panic(err)
+}
+
+func forTestGetDummy(count int) []byte {
+	dummy := make([]byte, count)
+	for i := 0; i < count; i++ {
+		dummy[i] = 105
+	}
+	return dummy
 }
