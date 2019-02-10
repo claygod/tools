@@ -29,6 +29,7 @@ func (b *Batcher) worker() {
 		var u int
 		// begin
 		select {
+		//TODO: наполнение должно идти и в момент отправки!!
 		//		case inData := <-b.chInput:
 		//			if _, err := buf.Write(inData); err != nil {
 		//				b.alarm(err)
