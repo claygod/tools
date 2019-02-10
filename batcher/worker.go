@@ -9,7 +9,7 @@ import (
 	//"fmt"
 	"runtime"
 	"sync/atomic"
-	//"time"
+	"time"
 )
 
 /*
@@ -22,8 +22,10 @@ worker - basic cycle.
 	- zeroes the buffer under the new batch
 */
 func (b *Batcher) worker() {
+	//fmt.Println("----------22--- ")
 	var buf bytes.Buffer
 	for {
+		//fmt.Println("-1 собрались получить с входного канала")
 		var u int
 		// begin
 		select {
@@ -34,23 +36,23 @@ func (b *Batcher) worker() {
 		case <-b.chStop:
 			atomic.StoreInt64(&b.stopFlag, stateStop)
 			return
-			// case inData := <-b.chInput:
-			// 	if _, err := buf.Write(inData); err != nil {
-			// 		b.alarm(err)
+		case inData := <-b.chInput:
+			if _, err := buf.Write(inData); err != nil {
+				b.alarm(err)
 
-			// 	} else {
-			// 		u++
-			// 	}
-		default:
-			break
+			} else {
+				u++
+			}
+			//default:
+			//break
 		}
 		// batch fill
+		//fmt.Println("-2 получили, может быть ещё что-то получим")
 		for i := 0; i < b.batchSize; i++ { // -1
 			select {
 			case inData := <-b.chInput:
 				if _, err := buf.Write(inData); err != nil {
 					b.alarm(err)
-
 				} else {
 					u++
 				}
@@ -61,15 +63,17 @@ func (b *Batcher) worker() {
 		// batch to out
 		bOut := buf.Bytes()
 		if len(bOut) > 0 {
-			//fmt.Println("Текущий батч - ", u)
+			//fmt.Println("************* Текущий батч - ", u)
 			if _, err := b.work.Write(buf.Bytes()); err != nil {
 				atomic.StoreInt64(&b.stopFlag, stateStop)
 				b.alarm(err)
 				return
 			}
+			//b.indicator.switchChan()
+			//buf.Reset()
 		} else {
-			//fmt.Println("Почему-то  len(bOut) == 0 ")
-			//time.Sleep(10 * time.Microsecond)
+			//fmt.Println("************** Почему-то  len(bOut) == 0 ")
+			time.Sleep(100000 * time.Microsecond)
 			runtime.Gosched()
 		}
 		// exit-check

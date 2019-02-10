@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-const cleanerShift uint8 = 128 // shift to exclude race condition
+const cleanerShift uint8 = 5 //128 // shift to exclude race condition
 
 /*
 indicator - the closing of the channels signals the completed task.
@@ -27,6 +27,7 @@ newIndicator - create new Indicator.
 */
 func newIndicator() *indicator {
 	i := &indicator{}
+	i.chDone[0] = make(chan struct{})
 	for u := 0; u < 256; u++ {
 		i.chDone[u] = make(chan struct{})
 	}
@@ -41,14 +42,14 @@ SwitchChan - switch channels:
 	- the old channel (with a shift) is closed
 */
 func (i *indicator) switchChan() {
-	//i.m.Lock()
-	//defer i.m.Unlock()
+	i.m.Lock()
+	defer i.m.Unlock()
 	//fmt.Println("indicator switch ", uint8(atomic.LoadUint32(&i.cursor)))
 	cursor := uint8(atomic.LoadUint32(&i.cursor))
 	i.chDone[cursor+1] = make(chan struct{})
 	atomic.StoreUint32(&i.cursor, uint32(cursor+1))
 	//if _, ok := i.chDone[cursor-cleanerShift]; ok {
-	close(i.chDone[cursor-cleanerShift])
+	close(i.chDone[cursor])
 	//}
 }
 
@@ -56,6 +57,8 @@ func (i *indicator) switchChan() {
 getChan - get current channel.
 */
 func (i *indicator) getChan() chan struct{} {
+	i.m.Lock()
+	defer i.m.Unlock()
 	cursor := uint8(atomic.LoadUint32(&i.cursor))
 	return i.chDone[cursor]
 }
@@ -64,5 +67,6 @@ func (i *indicator) autoSwitcher() {
 	for {
 		i.switchChan()
 		time.Sleep(200 * time.Microsecond)
+		//fmt.Println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Автосвич!! ")
 	}
 }

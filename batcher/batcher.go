@@ -54,6 +54,7 @@ Start - run a worker
 */
 func (b *Batcher) Start() {
 	if atomic.CompareAndSwapInt64(&b.stopFlag, stateStop, stateStart) {
+		go b.indicator.autoSwitcher()
 		go b.worker()
 	}
 }

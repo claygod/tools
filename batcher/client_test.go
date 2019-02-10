@@ -20,8 +20,8 @@ func TestClient(t *testing.T) {
 		go bc.Write([]byte{97})
 	}
 	time.Sleep(1000 * time.Millisecond)
-	bc.Close()
-	os.Remove(fileName)
+	//bc.Close()
+	//os.Remove(fileName)
 }
 
 // --- Helpers for tests ---
