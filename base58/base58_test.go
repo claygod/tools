@@ -38,9 +38,11 @@ func TestBase58Encode(t *testing.T) {
 	for _, example := range examples {
 		for _, pair := range example.tpairs {
 			got, err := example.coder.encodeNumber(pair.decoded)
+
 			if err != nil {
 				t.Errorf("Error occurred while encoding %s.", pair.decoded)
 			}
+
 			if string(got) != pair.encoded {
 				t.Errorf("Encode(%s) = %s, want %s", pair.decoded, string(got), pair.encoded)
 			}
@@ -52,9 +54,11 @@ func TestBase58Decode(t *testing.T) {
 	for _, example := range examples {
 		for _, pair := range example.tpairs {
 			got, err := example.coder.decodeBites([]byte(pair.encoded))
+
 			if err != nil {
 				t.Errorf("Error occurred while decoding %s.", pair.encoded)
 			}
+
 			if string(got) != pair.decoded {
 				t.Errorf("Decode(%s) = %s, want %s", pair.encoded, string(got), pair.decoded)
 			}
