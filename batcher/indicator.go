@@ -28,9 +28,11 @@ newIndicator - create new Indicator.
 func newIndicator() *indicator {
 	i := &indicator{}
 	i.chDone[0] = make(chan struct{})
+
 	for u := 0; u < 256; u++ {
 		i.chDone[u] = make(chan struct{})
 	}
+
 	//go i.autoSwitcher()
 	return i
 }
@@ -44,6 +46,7 @@ SwitchChan - switch channels:
 func (i *indicator) switchChan() {
 	i.m.Lock()
 	defer i.m.Unlock()
+
 	//fmt.Println("indicator switch ", uint8(atomic.LoadUint32(&i.cursor)))
 	cursor := uint8(atomic.LoadUint32(&i.cursor))
 	i.chDone[cursor+1] = make(chan struct{})
@@ -59,7 +62,9 @@ getChan - get current channel.
 func (i *indicator) getChan() chan struct{} {
 	i.m.Lock()
 	defer i.m.Unlock()
+
 	cursor := uint8(atomic.LoadUint32(&i.cursor))
+
 	return i.chDone[cursor]
 }
 

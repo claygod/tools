@@ -27,6 +27,7 @@ func Open(filePath string, batchSize int) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	chIn := make(chan []byte, batchSize)
 	nb := NewBatcher(newWriter(f), alarm, chIn, batchSize)
 	nb.Start()
@@ -89,5 +90,6 @@ func (w *writer) Write(in []byte) (int, error) {
 	if err == nil {
 		err = w.f.Sync()
 	}
+
 	return i, err
 }

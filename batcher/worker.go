@@ -37,6 +37,7 @@ func (b *Batcher) worker() {
 		case <-b.chStop:
 			atomic.StoreInt64(&b.stopFlag, stateStop)
 			return
+
 		case inData := <-b.chInput:
 			if _, err := buf.Write(inData); err != nil {
 				b.alarm(err)
@@ -57,6 +58,7 @@ func (b *Batcher) worker() {
 				} else {
 					u++
 				}
+
 			default:
 				break
 			}
@@ -68,6 +70,7 @@ func (b *Batcher) worker() {
 			if _, err := b.work.Write(buf.Bytes()); err != nil {
 				atomic.StoreInt64(&b.stopFlag, stateStop)
 				b.alarm(err)
+
 				return
 			}
 			//b.indicator.switchChan()
@@ -82,6 +85,7 @@ func (b *Batcher) worker() {
 		case <-b.chStop:
 			atomic.StoreInt64(&b.stopFlag, stateStop)
 			return
+
 		default:
 		}
 		// cursor (indicator)  switch
@@ -101,7 +105,6 @@ func (b *Batcher) fillBuf(buf bytes.Buffer, counter *int64) error {
 	case inData := <-b.chInput:
 		if _, err := buf.Write(inData); err != nil {
 			return err
-
 		}
 		//default:
 		//break
@@ -114,21 +117,26 @@ func (b *Batcher) fillBuf(buf bytes.Buffer, counter *int64) error {
 			if _, err := buf.Write(inData); err != nil {
 				return err
 			}
+
 			if atomic.LoadInt64(counter) == 0 {
 				break
 			}
+
 		default:
 			if atomic.LoadInt64(counter) == 0 {
 				break
 			}
+
 			runtime.Gosched()
 		}
 	}
+
 	return nil
 }
 
 func (b *Batcher) writeBuf(buf bytes.Buffer, counter *int64) error {
 	bOut := buf.Bytes()
+
 	if len(bOut) > 0 {
 		//fmt.Println("************* Текущий батч - ", u)
 		if _, err := b.work.Write(buf.Bytes()); err != nil {
@@ -143,6 +151,8 @@ func (b *Batcher) writeBuf(buf bytes.Buffer, counter *int64) error {
 		time.Sleep(100000 * time.Microsecond)
 		runtime.Gosched()
 	}
+
 	atomic.AddInt64(counter, -1)
+
 	return nil
 }
