@@ -12,10 +12,12 @@ import (
 
 func TestLoggerError(t *testing.T) {
 	lgr := New(&mockWriterTrue{})
+
 	count, err := lgr.Error("testing message").Send()
 	if err != nil {
 		t.Error(err)
 	}
+
 	if count != 24 {
 		t.Error("Invalid number of characters sent to the log: ", count)
 	}
@@ -23,10 +25,12 @@ func TestLoggerError(t *testing.T) {
 
 func TestLoggerWarning(t *testing.T) {
 	lgr := New(&mockWriterTrue{})
+
 	count, err := lgr.Warning("testing message").Send()
 	if err != nil {
 		t.Error(err)
 	}
+
 	if count != 26 {
 		t.Error("Invalid number of characters sent to the log: ", count)
 	}
@@ -34,10 +38,12 @@ func TestLoggerWarning(t *testing.T) {
 
 func TestLoggerContext(t *testing.T) {
 	lgr := New(&mockWriterTrue{}).Context("AAA", "aaa")
+
 	count, err := lgr.Error("testing message").Send()
 	if err != nil {
 		t.Error(err)
 	}
+
 	if count != 34 {
 		t.Error("Invalid number of characters sent to the log: ", count)
 	}
@@ -49,6 +55,7 @@ func TestLoggerBranchingLen(t *testing.T) {
 	lgrB := lgr.Context("BranchB", "55555")
 	countA, _ := lgrA.Send()
 	countB, _ := lgrB.Send()
+
 	if countA != 14 || countB != 16 {
 		t.Error("Invalid number of characters sent to the log when branching ", countA, countB)
 	}
@@ -80,6 +87,7 @@ type mockWriterTrue struct{}
 
 func (m *mockWriterTrue) Write(b []byte) (int, error) {
 	log.Print(string(b))
+
 	return len(b), nil
 }
 

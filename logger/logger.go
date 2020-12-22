@@ -86,10 +86,12 @@ func (l *Logger) Send() (int, error) {
 	buf := bytes.NewBuffer([]byte{})
 	curLogger := l
 	bufStr := make([]string, 0)
+
 	for {
 		if curLogger.writer != nil {
 			break
 		}
+
 		if curLogger.title == importanceError ||
 			curLogger.title == importanceWarning ||
 			curLogger.title == importanceInfo {
@@ -109,6 +111,8 @@ func (l *Logger) Send() (int, error) {
 	if err != nil {
 		return countA, err
 	}
+
 	countB, err := curLogger.writer.Write(buf.Bytes())
+
 	return countA + countB, err
 }
