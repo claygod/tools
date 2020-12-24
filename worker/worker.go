@@ -40,6 +40,7 @@ SetStartFunc -
 */
 func (w *Worker) Starter(f func() error) *Worker {
 	w.startFunc = f
+
 	return w
 }
 
@@ -48,6 +49,7 @@ SetStopFunc -
 */
 func (w *Worker) Stoper(f func() error) *Worker {
 	w.stopFunc = f
+
 	return w
 }
 
@@ -56,6 +58,7 @@ SetStopFunc -
 */
 func (w *Worker) Worker(f func()) *Worker {
 	w.workerFuncs = append(w.workerFuncs, f)
+
 	return w
 }
 
@@ -66,31 +69,42 @@ func (w *Worker) Start() error {
 	if len(w.workerFuncs) == 0 {
 		return fmt.Errorf("No functions for work (for start)")
 	}
+
 	state := atomic.LoadInt64(&w.hasp)
+
 	switch {
 	case state > stateStopped: // already started
 		return nil
+
 	case state < stateStopped: // already stops
 		for {
 			if atomic.LoadInt64(&w.hasp) == stateStopped {
 				break
 			}
+
 			runtime.Gosched()
 		}
+
 		fallthrough
+
 	case state == stateStopped: // stopped, you can start
 		for _, f := range w.workerFuncs {
 			if w.startFunc != nil {
 				if err := w.startFunc(); err != nil {
 					w.Stop()
+
 					return err
 				}
 			}
+
 			atomic.AddInt64(&w.hasp, 1)
+
 			go w.worker(f)
 		}
+
 		return nil
 	}
+
 	return nil
 }
 
@@ -101,32 +115,42 @@ func (w *Worker) Stop() error {
 	if len(w.workerFuncs) == 0 {
 		return fmt.Errorf("No functions for work  (for stop)")
 	}
+
 	state := atomic.LoadInt64(&w.hasp)
+
 	switch {
 	case state == stateStopped:
 		return nil
+
 	case state > stateStopped: // already stops
 		atomic.StoreInt64(&w.hasp, -state) // TODO: unsafe
+
 		fallthrough
+
 	case state < stateStopped:
 		for {
 			if atomic.LoadInt64(&w.hasp) == stateStopped {
 				if w.stopFunc != nil {
 					return w.stopFunc()
 				}
+
 				return nil
 			}
+
 			runtime.Gosched()
 		}
 	}
+
 	return nil
 }
 
 func (w *Worker) worker(f func()) {
 	for {
 		f()
+
 		if atomic.LoadInt64(&w.hasp) < stateStopped {
 			atomic.AddInt64(&w.hasp, 1)
+
 			return
 		}
 	}
