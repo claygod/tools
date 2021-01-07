@@ -4,7 +4,6 @@ package runtime
 // Copyright © 2017-2018 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
 
 import (
-	"runtime/internal/atomic"
 	"unsafe"
 )
 
@@ -14,6 +13,7 @@ type ChanAgent struct {
 
 func NewChanAgent(ch interface{}) *ChanAgent {
 	chd := *(*iface)(unsafe.Pointer(&ch))
+
 	return &ChanAgent{
 		hchan: *(**hchan)(unsafe.Pointer(&chd.data)),
 	}
@@ -36,9 +36,11 @@ Clean - the queue in the buffer will be reset
 func (c *ChanAgent) Clean() {
 	lock(&c.hchan.lock)
 	defer unlock(&c.hchan.lock)
+
 	if c.hchan.closed != 0 {
 		panic(plainError("ChanAgent: send on closed channel"))
 	}
+
 	chanClean(c.hchan)
 }
 
@@ -47,6 +49,7 @@ func chansendPr(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr, flagP
 		if !block {
 			return false
 		}
+
 		gopark(nil, nil, "chan send (nil chan)", traceEvGoStop, 2)
 		throw("unreachable")
 	}
@@ -66,6 +69,7 @@ func chansendPr(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr, flagP
 	}
 
 	var t0 int64
+
 	if blockprofilerate > 0 {
 		t0 = cputicks()
 	}
@@ -81,6 +85,7 @@ func chansendPr(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr, flagP
 		// Found a waiting receiver. We pass the value we want to send
 		// directly to the receiver, bypassing the channel buffer (if any).
 		send(c, sg, ep, func() { unlock(&c.lock) }, 3)
+
 		return true
 	}
 
@@ -90,23 +95,30 @@ func chansendPr(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr, flagP
 		if flagClean {
 			chanClean(c)
 		}
+
 		qp := chanbufPr(c, c.sendx, flagPriority)
+
 		if raceenabled {
 			raceacquire(qp)
 			racerelease(qp)
 		}
+
 		typedmemmove(c.elemtype, qp, ep)
 		c.sendx++
+
 		if c.sendx == c.dataqsiz {
 			c.sendx = 0
 		}
+
 		c.qcount++
 		unlock(&c.lock)
+
 		return true
 	}
 
 	if !block {
 		unlock(&c.lock)
+
 		return false
 	}
 
@@ -114,9 +126,11 @@ func chansendPr(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr, flagP
 	gp := getg()
 	mysg := acquireSudog()
 	mysg.releasetime = 0
+
 	if t0 != 0 {
 		mysg.releasetime = -1
 	}
+
 	// No stack splits between assigning elem and enqueuing mysg
 	// on gp.waiting where copystack can find it.
 	mysg.elem = ep
@@ -133,19 +147,26 @@ func chansendPr(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr, flagP
 	if mysg != gp.waiting {
 		throw("G waiting list is corrupted")
 	}
+
 	gp.waiting = nil
+
 	if gp.param == nil {
 		if c.closed == 0 {
 			throw("chansend: spurious wakeup")
 		}
+
 		panic(plainError("send on closed channel"))
 	}
+
 	gp.param = nil
+
 	if mysg.releasetime > 0 {
 		blockevent(mysg.releasetime-t0, 2)
 	}
+
 	mysg.c = nil
 	releaseSudog(mysg)
+
 	return true
 }
 
@@ -156,8 +177,10 @@ func chanbufPr(c *hchan, i uint, flagPriority bool) unsafe.Pointer {
 			p2 := (*unsafe.Pointer)(unsafe.Pointer(uintptr(c.buf) + uintptr(u)*uintptr(c.elemsize)))
 			*p2 = *p1
 		}
+
 		return c.buf
 	}
+
 	return add(c.buf, uintptr(i)*uintptr(c.elemsize))
 }
 
