@@ -143,3 +143,10 @@ IsReady - check is ready.
 func (s *StartStop) IsReady() bool {
 	return atomic.LoadInt64(&s.enumerator) == stateReady
 }
+
+/*
+IsRun - check is run.
+*/
+func (s *StartStop) IsRun() bool {
+	return atomic.LoadInt64(&s.enumerator) >= stateRun
+}
