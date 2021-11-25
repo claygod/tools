@@ -62,8 +62,10 @@ func (s *StartStop) Stop() bool {
 		case curNum == stateReady: // the best way
 			return true
 		case curNum == stateRun:
-			atomic.CompareAndSwapInt64(&s.enumerator, stateRun, stateReady)
-		case curNum >= stateRun: // disable the ability to start new tasks
+			if atomic.CompareAndSwapInt64(&s.enumerator, stateRun, stateReady) {
+				return true
+			}
+		case curNum > stateRun: // disable the ability to start new tasks
 			atomic.CompareAndSwapInt64(&s.enumerator, curNum, curNum-blockedBarrier)
 		}
 		runtime.Gosched()
