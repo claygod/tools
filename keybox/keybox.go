@@ -2,7 +2,7 @@ package keybox
 
 // Keybox
 // Main
-// Copyright © 2018 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
+// Copyright © 2018-2023 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
 
 import (
 	"crypto/aes"
@@ -37,7 +37,7 @@ func New(pass []byte) (*KeyBox, error) {
 	return k, nil
 }
 
-func (k *KeyBox) key() []byte {
+func (k *KeyBox) Key() []byte {
 	pass, _ := k.decrypt()
 	return pass
 }
