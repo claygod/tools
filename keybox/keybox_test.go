@@ -2,7 +2,7 @@ package keybox
 
 // Keybox
 // Tests
-// Copyright © 2023 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
+// Copyright © 2023-2024 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
 
 import (
 	"fmt"
@@ -19,6 +19,10 @@ func TestNewKeybox(t *testing.T) {
 
 	if err != nil {
 		t.Error(err)
+	}
+
+	if pass1 == string(kb.pass) {
+		t.Errorf("the password was not encrypted")
 	}
 
 	if pass2 := kb.Key(); pass1 != string(pass2) {
