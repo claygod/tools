@@ -2,7 +2,7 @@ package keybox
 
 // Keybox
 // Tests
-// Copyright © 2023-2024 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
+// Copyright © 2018-2024 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
 
 import (
 	"fmt"
