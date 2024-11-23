@@ -16,12 +16,31 @@ type ErrStore struct {
 	errs     []error
 }
 
-func NewErrStore(errShort bool) *ErrStore {
+func NewErrStore() *ErrStore {
 	return &ErrStore{
 		m:        sync.Mutex{},
-		errShort: errShort,
+		errShort: ErrShort,
 		errs:     make([]error, 0),
 	}
+}
+
+func (e *ErrStore) SetShortMode() *ErrStore {
+	e.errShort = ErrShort
+
+	return e
+}
+
+func (e *ErrStore) SetFullMode() *ErrStore {
+	e.errShort = ErrFull
+
+	return e
+}
+
+func (e *ErrStore) Count() int {
+	e.m.Lock()
+	defer e.m.Unlock()
+
+	return len(e.errs)
 }
 
 func (e *ErrStore) Error() string {
@@ -40,6 +59,13 @@ func (e *ErrStore) Add(err error) {
 	defer e.m.Unlock()
 
 	e.errs = append(e.errs, err)
+}
+
+func (e *ErrStore) Append(e2 *ErrStore) {
+	e.m.Lock()
+	defer e.m.Unlock()
+
+	e.errs = append(e.errs, e2.errs...)
 }
 
 func (e *ErrStore) short() string {

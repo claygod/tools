@@ -2,37 +2,21 @@ package splitwork
 
 import (
 	"context"
-	"fmt"
 	"runtime"
-	"time"
 
 	"github.com/claygod/tools/errstore"
 )
 
 type Worker[T any, R any] struct {
-	wFunc    func(T) (R, error)
-	wCount   int
-	errShort bool
+	wFunc  func(T) (R, error)
+	wCount int
 }
 
 func NewWorker[T any, R any](wFunc func(T) (R, error)) *Worker[T, R] {
 	return &Worker[T, R]{
-		wFunc:    wFunc,
-		wCount:   runtime.NumCPU(),  // default
-		errShort: errstore.ErrShort, // default
+		wFunc:  wFunc,
+		wCount: runtime.NumCPU(), // default
 	}
-}
-
-func (w *Worker[T, R]) SetShortModeErr() *Worker[T, R] {
-	w.errShort = errstore.ErrShort
-
-	return w
-}
-
-func (w *Worker[T, R]) SetFullModeErr() *Worker[T, R] {
-	w.errShort = errstore.ErrFull
-
-	return w
 }
 
 func (w *Worker[T, R]) SetWorkersCount(count int) *Worker[T, R] {
@@ -44,26 +28,22 @@ func (w *Worker[T, R]) SetWorkersCount(count int) *Worker[T, R] {
 }
 
 func (w *Worker[T, R]) Do(ctx context.Context, items []T) RespWrap[R] {
-	errMode := w.errShort
 	doneChan := ctx.Done()
 	workChan := make(chan T)
 	respChan := make(chan RespWrap[R])
 
 	// worker
 	wf := func(chIn chan T, chOut chan RespWrap[R]) {
-		errs := errstore.NewErrStore(errMode)
+		errs := errstore.NewErrStore()
 		rList := make([]R, 0)
 
 		for in := range chIn {
-			fmt.Println("Обрабатываю ", in)
 			resp, err := w.wFunc(in)
 			if err != nil {
 				errs.Add(err)
 			} else {
 				rList = append(rList, resp)
 			}
-
-			time.Sleep(2 * time.Second)
 		}
 
 		chOut <- RespWrap[R]{Data: rList, Err: errs}
@@ -80,7 +60,6 @@ workForList:
 	for _, v := range items {
 		select {
 		case <-doneChan:
-			fmt.Println("Сработал прерыватель! ", v)
 			break workForList
 
 		default:
@@ -92,13 +71,12 @@ workForList:
 
 	// collecting results of workers' work
 	rData := make([]R, 0, len(items))
-	rErr := errstore.NewErrStore(errMode)
+	rErr := errstore.NewErrStore()
 
 	for i := 0; i < w.wCount; i++ {
-		fmt.Println("Получение ", i)
 		wResp := <-respChan
 
-		rErr.Add(wResp.Err)
+		rErr.Append(wResp.Err)
 		rData = append(rData, wResp.Data...)
 	}
 
@@ -110,5 +88,5 @@ workForList:
 
 type RespWrap[R any] struct {
 	Data []R
-	Err  error
+	Err  *errstore.ErrStore
 }
