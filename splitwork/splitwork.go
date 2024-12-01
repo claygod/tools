@@ -1,5 +1,9 @@
 package splitwork
 
+// Split work
+// Universal worker
+// Copyright © 2024 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
+
 import (
 	"context"
 	"runtime"
