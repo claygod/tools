@@ -4,4 +4,5 @@ use (
 	./errstore
 	./splitwork
 	./worker
+	./keybox
 )

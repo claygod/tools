@@ -9,7 +9,14 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"errors"
+	"fmt"
 	"io"
+)
+
+const (
+	lenPassMax = 1024
+	lenPassMin = 2
+	lenKey     = 16
 )
 
 /*
@@ -21,19 +28,36 @@ type KeyBox struct {
 }
 
 func New(pass []byte) (*KeyBox, error) {
-	key := make([]byte, 16)
+	if len(pass) < lenPassMin || len(pass) > lenPassMax {
+		return nil, fmt.Errorf("key length %d, max %d, min %d", len(pass), lenPassMax, lenPassMin)
+	}
+
+	key := make([]byte, lenKey)
 	rand.Read(key)
 
 	k := &KeyBox{}
 	k.rndKey = key
+
 	cpass, err := k.encrypt(pass, key)
 	if err != nil {
 		return nil, err
 	}
+
 	k.pass = cpass
-	if _, err := k.decrypt(); err != nil { // reverse check
+
+	return k, nil
+}
+
+func NewWithClean(pass []byte) (*KeyBox, error) {
+	k, err := New(pass)
+	if err != nil {
 		return nil, err
 	}
+
+	for i := range pass {
+		pass[i] = 0
+	}
+
 	return k, nil
 }
 
