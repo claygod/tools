@@ -2,9 +2,11 @@ package porter
 
 // Porter
 // API
-// Copyright © 2018 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
+// Copyright © 2018-2024 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
 
 import (
+	"hash"
+	"hash/fnv"
 	"runtime"
 	"sort"
 	"sync/atomic"
@@ -22,11 +24,14 @@ const (
 Porter - regulates access to resources by keys.
 */
 type Porter struct {
-	data [(1 << 24) - 1]int32
+	data   [(1 << 32) - 1]int32
+	hash32 hash.Hash32
 }
 
 func New() *Porter {
-	return &Porter{}
+	return &Porter{
+		hash32: fnv.New32a(),
+	}
 }
 
 /*
@@ -59,14 +64,9 @@ func (p *Porter) throw(hashes []int) {
 
 func (p *Porter) stringsToHashes(keys []string) []int {
 	out := make([]int, 0, len(keys))
-	tempArr := make(map[int]bool)
 
 	for _, key := range keys {
-		tempArr[p.stringToHashe(key)] = true
-	}
-
-	for key, _ := range tempArr {
-		out = append(out, key)
+		out = append(out, p.stringToHash(key))
 	}
 
 	sort.Ints(out)
@@ -74,21 +74,8 @@ func (p *Porter) stringsToHashes(keys []string) []int {
 	return out
 }
 
-func (p *Porter) stringToHashe(key string) int {
-	switch len(key) {
-	case 0:
-		return 0
-
-	case 1:
-		return int(uint(key[0]))
-
-	case 2:
-		return int(uint(key[1])<<4) + int(uint(key[0]))
-
-	case 3:
-		return int(uint(key[2])<<8) + int(uint(key[1])<<4) + int(uint(key[0]))
-
-	default:
-		return int(uint(key[3])<<12) + int(uint(key[2])<<8) + int(uint(key[1])<<4) + int(uint(key[0]))
-	}
+func (p *Porter) stringToHash(key string) int {
+	h := fnv.New32a()
+	h.Write([]byte(key))
+	return int(h.Sum32())
 }
