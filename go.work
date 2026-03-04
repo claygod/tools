@@ -1,4 +1,4 @@
-go 1.23
+go 1.25
 
 use (
 	./errstore
@@ -7,4 +7,5 @@ use (
 	./keybox
 	./porter
 	./chbqueue
+	./revolver_channel
 )

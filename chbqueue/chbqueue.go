@@ -5,10 +5,8 @@ package chbqueue
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"sync/atomic"
-	"time"
 )
 
 const (
@@ -211,114 +209,4 @@ func (c *chsList) close() {
 	atomic.StoreInt64(&c.closed, chBQueueClosed)
 	close(c.inCh)
 	<-c.closedCh
-}
-
-const (
-	StatusCreated int64 = 0
-	StatusStarted int64 = 1
-	StatusStopped int64 = 2
-)
-
-type RevolverChannel16Bit struct {
-	list     [65535]chan int
-	shiftIn  uint16
-	shiftOut uint16
-	In       chan int
-	Out      chan int
-	closedCh chan struct{}
-	chCap    int
-	status   int64
-}
-
-func NewRevolverChannel16Bit(chCap int) *RevolverChannel16Bit {
-	var list [65535]chan int
-	list[0] = make(chan int, chCap)
-	list[0] <- 7
-	<-list[0]
-
-	rCh := &RevolverChannel16Bit{
-		list:     list,
-		shiftIn:  0,
-		shiftOut: 0,
-		In:       make(chan int),
-		Out:      make(chan int),
-		closedCh: make(chan struct{}),
-		chCap:    chCap,
-		status:   StatusCreated,
-	}
-
-	// rCh.Start()
-
-	return rCh
-}
-
-func (r *RevolverChannel16Bit) workerIn() {
-	for {
-		val, ok := <-r.In
-		if !ok {
-			fmt.Println("channel IN closed", val, ok)
-
-			break // channel closed
-		}
-
-		select {
-		case r.list[r.shiftIn] <- val:
-			fmt.Println("ok", val)
-
-		default:
-			fmt.Println("def begin ", val)
-			// add nov ch
-			if r.shiftIn+1 != r.shiftOut {
-				r.shiftIn++
-				r.list[r.shiftIn] = make(chan int, r.chCap)
-			}
-
-			r.list[r.shiftIn] <- val // the case when the blocking will occur
-			fmt.Println("def end ", val)
-		}
-	}
-}
-
-func (r *RevolverChannel16Bit) workerOut() {
-	for {
-		val, ok := <-r.list[r.shiftOut]
-		if !ok {
-			break // case channel close
-		}
-
-		r.Out <- val
-
-		// closed
-		if atomic.LoadInt64(&r.status) == StatusStopped && r.shiftOut == r.shiftIn && len(r.list[r.shiftOut]) == 0 {
-			close(r.Out)
-
-			break
-		}
-
-		// how shift?
-		if len(r.list[r.shiftOut]) == 0 && r.shiftOut != r.shiftIn {
-			r.list[r.shiftOut] = nil
-			r.shiftOut++
-		}
-	}
-
-	close(r.closedCh)
-}
-
-func (r *RevolverChannel16Bit) Start() {
-	go r.workerIn()
-	go r.workerOut()
-
-	atomic.StoreInt64(&r.status, StatusStarted)
-	time.Sleep(time.Millisecond)
-}
-
-func (r *RevolverChannel16Bit) Stop() {
-	if atomic.LoadInt64(&r.status) == StatusCreated || atomic.LoadInt64(&r.status) == StatusStopped {
-		return
-	}
-
-	atomic.StoreInt64(&r.status, StatusStopped)
-	close(r.In)
-	<-r.closedCh
 }
