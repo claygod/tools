@@ -8,4 +8,5 @@ use (
 	./porter
 	./chbqueue
 	./revolver_channel
+	./circle_sector_control
 )
