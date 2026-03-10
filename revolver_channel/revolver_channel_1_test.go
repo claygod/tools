@@ -10,15 +10,18 @@ import (
 	"time"
 )
 
-func TestNewRevolver16Channel(t *testing.T) {
-	rCh := NewRevolverChannel16Bit[int](3)
+func TestNewRevolverChannel(t *testing.T) {
+	rCh, _ := NewRevolverChannel[int](3, 65536)
+	defer cleanupChannel(rCh)
 
 	for i := 40; i < 48; i++ {
+		// fmt.Println(rCh.shifter.Tail(), rCh.shifter.Head())
+		// time.Sleep(time.Millisecond)
 		u := i
 		rCh.In <- u
 	}
 
-	if v := rCh.shiftIn; v != 2 {
+	if v := rCh.shifter.Head(); v != 2 {
 		t.Errorf("Expected value 2, obtained %d", v)
 	}
 
@@ -28,8 +31,9 @@ func TestNewRevolver16Channel(t *testing.T) {
 
 }
 
-func TestRevolverChannel16OrderOfResults(t *testing.T) {
-	rCh := NewRevolverChannel16Bit[int](3)
+func TestRevolverChannelOrderOfResults(t *testing.T) {
+	rCh, _ := NewRevolverChannel[int](3, 65536)
+	defer cleanupChannel(rCh)
 
 	for i := 40; i < 48; i++ {
 		u := i
@@ -46,8 +50,9 @@ func TestRevolverChannel16OrderOfResults(t *testing.T) {
 	}
 }
 
-func TestRevolverChannel16Len1(t *testing.T) {
-	rCh := NewRevolverChannel16Bit[int](3)
+func TestRevolverChannelLen1(t *testing.T) {
+	rCh, _ := NewRevolverChannel[int](3, 65536)
+	defer cleanupChannel(rCh)
 
 	for i := 40; i < 48; i++ {
 		u := i
@@ -59,8 +64,9 @@ func TestRevolverChannel16Len1(t *testing.T) {
 	}
 }
 
-func TestRevolverChannel16StopClose(t *testing.T) {
-	rCh := NewRevolverChannel16Bit[int](3)
+func TestRevolverChannelStopClose(t *testing.T) {
+	rCh, _ := NewRevolverChannel[int](3, 65536)
+	defer cleanupChannel(rCh)
 
 	for i := 40; i < 48; i++ {
 		u := i
@@ -112,12 +118,12 @@ func TestRevolverChannel16StopClose(t *testing.T) {
 // ============================================================================
 // Тест: Utilization() — низкая, средняя и высокая утилизация
 // ============================================================================
-func TestRevolverChannel16_Utilization(t *testing.T) {
+func TestRevolverChannel_Utilization(t *testing.T) {
 	const chCap = 1 // Минимальный буфер, чтобы каждый value занимал новый канал
 
 	t.Run("Low utilization (~0.01%)", func(t *testing.T) {
-		rCh := NewRevolverChannel16Bit[int](chCap)
-		defer cleanupChannel16(rCh)
+		rCh, _ := NewRevolverChannel[int](chCap, 65536)
+		defer cleanupChannel(rCh)
 
 		// Отправляем 10 значений — должно занять ~10 каналов из 65536
 		for i := 0; i < 10; i++ {
@@ -133,7 +139,7 @@ func TestRevolverChannel16_Utilization(t *testing.T) {
 				util, expectedMin, expectedMax)
 		}
 		t.Logf("Low utilization: %.4f%% (shiftIn=%d, shiftOut=%d)",
-			util, rCh.shiftIn, rCh.shiftOut)
+			util, rCh.shifter.Head(), rCh.shifter.Tail())
 	})
 
 	t.Run("Medium utilization (~50%)", func(t *testing.T) {
@@ -141,8 +147,8 @@ func TestRevolverChannel16_Utilization(t *testing.T) {
 			t.Skip("Skipping medium utilization test in short mode")
 		}
 
-		rCh := NewRevolverChannel16Bit[int](chCap)
-		defer cleanupChannel16(rCh)
+		rCh, _ := NewRevolverChannel[int](chCap, 65536)
+		defer cleanupChannel(rCh)
 
 		// Отправляем ~32768 значений → ~50% утилизации
 		targetChannels := limit16bit / 2
@@ -184,7 +190,7 @@ func TestRevolverChannel16_Utilization(t *testing.T) {
 			// Не fail-им тест, т.к. точное значение зависит от таймингов
 		} else {
 			t.Logf("Medium utilization: %.2f%% (shiftIn=%d, shiftOut=%d)",
-				util, rCh.shiftIn, rCh.shiftOut)
+				util, rCh.shifter.Head(), rCh.shifter.Tail())
 		}
 
 		// Завершаем тест
@@ -203,7 +209,7 @@ func TestRevolverChannel16_Utilization(t *testing.T) {
 		}
 
 		const chCap = 1
-		rCh := NewRevolverChannel16Bit[int](chCap)
+		rCh, _ := NewRevolverChannel[int](chCap, 65536)
 		targetValues := limit16bit * 9 / 10
 
 		var (
@@ -254,7 +260,7 @@ func TestRevolverChannel16_Utilization(t *testing.T) {
 		utilMu.Unlock()
 
 		t.Logf("Peak utilization: %.2f%% (shiftIn=%d, shiftOut=%d)",
-			peakUtil, rCh.shiftIn, rCh.shiftOut)
+			peakUtil, rCh.shifter.Head(), rCh.shifter.Tail())
 
 		if peakUtil < 50 {
 			t.Errorf("Expected peak utilization >50%%, got %.2f%%", peakUtil)
@@ -270,7 +276,8 @@ func TestRevolverChannel16_Utilization(t *testing.T) {
 	})
 
 	t.Run("Utilization after full drain", func(t *testing.T) {
-		rCh := NewRevolverChannel16Bit[int](chCap)
+		rCh, _ := NewRevolverChannel[int](chCap, 65536)
+		defer cleanupChannel(rCh)
 
 		// Наполняем и полностью вычитываем
 		for i := 0; i < 100; i++ {
@@ -305,14 +312,14 @@ func TestRevolverChannel16_Utilization(t *testing.T) {
 // ============================================================================
 // Тест: Утилизация при циклическом использовании (wraparound)
 // ============================================================================
-func TestRevolverChannel16_Utilization_Wraparound(t *testing.T) {
+func TestRevolverChannel_Utilization_Wraparound(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping wraparound utilization test in short mode")
 	}
 
 	const chCap = 1
-	rCh := NewRevolverChannel16Bit[int](chCap)
-	defer cleanupChannel16(rCh)
+	rCh, _ := NewRevolverChannel[int](chCap, 65536)
+	defer cleanupChannel(rCh)
 
 	var wg sync.WaitGroup
 
@@ -377,7 +384,7 @@ Loop:
 // ============================================================================
 // Helper: безопасная очистка канала после теста
 // ============================================================================
-func cleanupChannel16[T any](rCh *RevolverChannel16Bit[T]) {
+func cleanupChannel[T any](rCh *RevolverChannel[T]) {
 	rCh.Stop()
 	// Дренажируем Out в фоне, чтобы workerOut мог завершиться
 	go func() {

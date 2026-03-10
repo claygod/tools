@@ -8,6 +8,13 @@ import (
 	"sync/atomic"
 )
 
+const (
+	StatusCreated int64 = iota
+	StatusStarted
+	StatusStopped
+	StatusClosed
+)
+
 type CircleSectorControl struct {
 	cap  int64
 	_    [56]byte // cap в отдельной cache line
@@ -71,6 +78,10 @@ func (c *CircleSectorControl) Head() int64 {
 
 func (c *CircleSectorControl) Tail() int64 {
 	return atomic.LoadInt64(&c.tail)
+}
+
+func (c *CircleSectorControl) IsSingleSector() bool {
+	return atomic.LoadInt64(&c.tail) == atomic.LoadInt64(&c.head)
 }
 
 func (c *CircleSectorControl) increment(in int64) int64 {
